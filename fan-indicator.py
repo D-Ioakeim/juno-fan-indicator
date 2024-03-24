@@ -13,6 +13,8 @@ class TrayIndicator:
         print(os.getcwd())
         self.icon_path = 'generic-fan-symbolic'  # icon in tray
         self.file_path = '/sys/devices/platform/coretemp.0/hwmon/hwmon6/temp1_input'
+        self.rpm_file_path = '/sys/devices/platform/clevofan/hwmon/hwmon4/fan1_input'
+        self.max_fan_speed = 3561  # maximum fan speed
 
         self.indicator = AppIndicator3.Indicator.new(self.app, self.icon_path,
                                                      AppIndicator3.IndicatorCategory.APPLICATION_STATUS)
@@ -24,9 +26,14 @@ class TrayIndicator:
 
         # Update the tooltip periodically
         GLib.timeout_add_seconds(5, self.update_tooltip)
+        GLib.timeout_add_seconds(5, self.update_menu)
 
     def build_menu(self):
         menu = Gtk.Menu()
+
+        # Add a menu item to display CPU temperature and RPM
+        self.item_fan_speed = Gtk.MenuItem(label="")
+        menu.append(self.item_fan_speed)
 
         # Add a quit option to the menu
         item_quit = Gtk.MenuItem(label='Quit')
@@ -35,6 +42,17 @@ class TrayIndicator:
 
         menu.show_all()
         return menu
+
+    def update_menu(self):
+        with open(self.rpm_file_path, 'r') as file:
+            rpm_value = file.read().strip()
+            # Calculate RPM percentage
+            rpm_percentage = "{:.0f}".format((float(rpm_value) / self.max_fan_speed) * 100)
+            # Format the label with CPU temperature and RPM
+            menu_label = "CPU: {}% | {} RPM".format(rpm_percentage, rpm_value)
+            # Update the label of the menu item
+            self.item_fan_speed.set_label(menu_label)
+        return True
 
     def update_tooltip(self):
         try:
