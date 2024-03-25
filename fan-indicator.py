@@ -14,7 +14,7 @@ class TrayIndicator:
         self.icon_path = 'generic-fan-symbolic'  # icon in tray
         self.file_path = '/sys/devices/platform/coretemp.0/hwmon/hwmon6/temp1_input'
         self.rpm_file_path = '/sys/devices/platform/clevofan/hwmon/hwmon4/fan1_input'
-        self.max_fan_speed = 3561  # maximum fan speed
+        self.max_fan_speed = 5187  # maximum fan speed
 
         self.indicator = AppIndicator3.Indicator.new(self.app, self.icon_path,
                                                      AppIndicator3.IndicatorCategory.APPLICATION_STATUS)
