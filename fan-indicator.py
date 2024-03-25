@@ -11,7 +11,7 @@ class TrayIndicator:
     def __init__(self):
         self.app = 'My Indicator'
         print(os.getcwd())
-        self.icon_path = 'generic-fan-symbolic'  # icon in tray
+        self.icon_path = '/usr/share/icons/hicolor/symbolic/'  # icon in tray
         self.file_path = '/sys/devices/platform/coretemp.0/hwmon/hwmon6/temp1_input'
         self.rpm_file_path = '/sys/devices/platform/clevofan/hwmon/hwmon4/fan1_input'
         self.max_fan_speed = 5187  # maximum fan speed
