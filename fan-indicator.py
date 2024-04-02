@@ -8,10 +8,11 @@ gi.require_version('AppIndicator3', '0.1')
 from gi.repository import Gtk, AppIndicator3, GLib
 
 # Configuration file path
-CONFIG_FILE_PATH = os.path.join(os.path.expanduser('~'), '.fan_indicator_config')
+CONFIG_FILE_PATH = os.path.join(os.path.expanduser('~/.config'), 'fan_indicator_config')
 
 # Default temperature unit (True -> Celsius, False -> Fahrenheit)
 DEFAULT_TEMPERATURE_UNIT_CELSIUS = True
+
 
 # ------------------------- Configuration Handling -------------------------
 
@@ -31,6 +32,7 @@ def load_configuration():
 def save_configuration(config):
     with open(CONFIG_FILE_PATH, 'w') as configfile:
         config.write(configfile)
+
 
 # ------------------------- Hardware Information -------------------------
 
@@ -67,17 +69,20 @@ def find_fan_speed_sensor_directory():
 
     return fan_speed_sensor_directory
 
+
 # ------------------------- Temperature Conversion -------------------------
 
 # Function to convert Celsius to Fahrenheit
 def convert_celsius_to_fahrenheit(celsius):
     return (celsius * 9 / 5) + 32
 
+
 # ------------------------- Application Management -------------------------
 
 # Function to handle quitting the application
 def quit_application(source):
     Gtk.main_quit()
+
 
 # ------------------------- Tray Indicator Class -------------------------
 
@@ -93,9 +98,13 @@ class FanTrayIndicator:
 
         # Initialize the indicator
         self.APP_NAME = 'Fan Indicator'
-        self.ICON_PATH = '/usr/share/icons/hicolor/symbolic/generic-fan-symbolic.svg'  # icon in tray
-        self.fan_speed_sensor_path = find_fan_speed_sensor_directory() + '/fan1_input'
-        self.max_fan_speed = 5270  # maximum fan speed
+        self.ICON_PATH = 'temperature-symbolic'  # icon in tray
+        self.fan1_speed_rpm_path = find_fan_speed_sensor_directory() + '/fan1_input'
+        self.fan1_speed_pwm_path = find_fan_speed_sensor_directory() + '/pwm1'
+        self.max_fan_speed = 255  # maximum fan speed
+        self.gpu_fan_speed_rpm_path = find_fan_speed_sensor_directory() + '/fan2_input'
+        self.gpu_fan_speed_pwm_path = find_fan_speed_sensor_directory() + '/pwm2'
+        self.fan2_exists = os.path.exists(self.gpu_fan_speed_rpm_path) and os.path.exists(self.gpu_fan_speed_pwm_path)
 
         self.indicator = AppIndicator3.Indicator.new(
             self.APP_NAME,
@@ -113,8 +122,13 @@ class FanTrayIndicator:
         menu = Gtk.Menu()
 
         # Add a menu item to display CPU temperature and RPM
-        self.item_fan_speed = Gtk.MenuItem(label="")
-        menu.append(self.item_fan_speed)
+        self.item_fan_speed_cpu = Gtk.MenuItem(label="")
+        menu.append(self.item_fan_speed_cpu)
+
+        if self.fan2_exists:
+            # Add a menu item to display GPU temperature and RPM
+            self.item_fan_speed_gpu = Gtk.MenuItem(label="")
+            menu.append(self.item_fan_speed_gpu)
 
         # Add a menu item to toggle temperature unit
         item_toggle_temp_unit = Gtk.MenuItem(label="Toggle Temperature Unit")
@@ -152,15 +166,29 @@ class FanTrayIndicator:
 
     # Function to update the menu
     def update_fan_speed_menu(self):
-        with open(self.fan_speed_sensor_path, 'r') as file:
-            fan_speed_value = file.read().strip()
-            # Calculate RPM percentage
-            fan_speed_percentage = "{:.0f}".format((float(fan_speed_value) / self.max_fan_speed) * 100)
+        with open(self.fan1_speed_pwm_path, 'r') as f1, open(self.fan1_speed_rpm_path, 'r') as f2:
+            cpu_pwm_value = f1.read().strip()
+            cpu_rpm_value = f2.read().strip()
+            # Calculate percentage
+            cpu_speed_percentage = "{:.0f}".format((float(cpu_pwm_value) / self.max_fan_speed) * 100)
             # Format the label with CPU temperature and RPM
-            menu_label = "CPU: {}% | {} RPM".format(fan_speed_percentage, fan_speed_value)
-            # Update the label of the menu item
-            self.item_fan_speed.set_label(menu_label)
+            menu_label_cpu = "CPU FAN: {}% | {} RPM".format(cpu_speed_percentage, cpu_rpm_value)
+            # Update the label of the CPU fan menu item
+            self.item_fan_speed_cpu.set_label(menu_label_cpu)
+
+        if self.fan2_exists:
+            with open(self.gpu_fan_speed_pwm_path, 'r') as f1, open(self.gpu_fan_speed_rpm_path, 'r') as f2:
+                gpu_pwm_value = f1.read().strip()
+                gpu_rpm_value = f2.read().strip()
+                # Calculate percentage
+                gpu_speed_percentage = "{:.0f}".format((float(gpu_pwm_value) / self.max_fan_speed) * 100)
+                # Format the label with GPU temperature and RPM
+                menu_label_gpu = "GPU FAN: {}% | {} RPM".format(gpu_speed_percentage, gpu_rpm_value)
+                # Update the label of the GPU fan menu item
+                self.item_fan_speed_gpu.set_label(menu_label_gpu)
+
         return True
+
 
     # Function to toggle temperature unit
     def toggle_temperature_unit(self, source):
@@ -170,6 +198,7 @@ class FanTrayIndicator:
         save_configuration(self.config)
         # Call update_cpu_temp_tooltip to reflect the change immediately
         self.update_cpu_temp_tooltip()
+
 
 # ------------------------- Main -------------------------
 
